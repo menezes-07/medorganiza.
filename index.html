@@ -1,0 +1,193 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#123d39">
+<title>MedOrganiza</title>
+<style>
+:root{--g:#123d39;--g2:#1f6a5d;--mint:#e1f2ec;--bg:#f5f7f6;--ink:#172b29;--muted:#6a7b77;--line:#e0e8e4;--red:#b84545}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,sans-serif}
+button,input,textarea{font:inherit}
+button{cursor:pointer;border:0;border-radius:12px;padding:11px 14px;background:var(--g2);color:white;font-weight:650}
+button.sec{background:var(--mint);color:var(--g)}
+button.del{background:#fff0f0;color:var(--red)}
+header{background:var(--g);color:white;padding:24px 18px 35px;border-radius:0 0 25px 25px}
+header h1{margin:0;font-size:25px}header p{color:#d3e5df;margin:5px 0}
+main{max-width:850px;margin:-12px auto 0;padding:0 14px 100px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat,.panel,.card{background:white;border:1px solid var(--line);border-radius:17px;padding:16px;margin-bottom:13px}
+.stat b{display:block;font-size:27px}.muted{color:var(--muted);font-size:12px}
+nav{display:flex;gap:5px;justify-content:space-around;margin:12px 0;flex-wrap:wrap}
+nav button{background:transparent;color:var(--muted);padding:9px;font-size:12px}
+nav button.active{background:var(--mint);color:var(--g)}
+.page{display:none}.page.active{display:block}
+h2{font-size:19px;margin:0 0 12px}h3{font-size:16px;margin:0 0 12px}
+label{display:block;font-size:12px;font-weight:700;margin:12px 0 5px}
+input,textarea{width:100%;padding:12px;border:1px solid #d7e1dc;border-radius:11px;background:white;color:var(--ink)}
+.timeRow{display:flex;gap:8px;margin:7px 0}.timeRow input{flex:1}
+.actions{display:flex;gap:8px;margin-top:12px}.actions button{flex:1}
+.chip{display:inline-block;background:#f0f5f2;padding:5px 8px;border-radius:8px;margin:4px;font-size:12px}
+.card h3{margin-bottom:4px}.card p{margin:4px 0}
+.notice{background:#fff8e9;border:1px solid #f0dfbd;border-radius:12px;padding:12px;font-size:12px;margin-top:13px}
+.empty{padding:20px;text-align:center;color:var(--muted)}
+@media(min-width:650px){.stats{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<header>
+<h1>✚ MedOrganiza</h1>
+<p>Organizador inteligente de medicamentos</p>
+<h2 style="margin:23px 0 5px">Seu cuidado, mais organizado.</h2>
+<p>Organize seus medicamentos, horários e quantidades em um só lugar.</p>
+</header>
+<main>
+<div class="stats">
+<div class="stat">💊<b id="total">0</b><span class="muted">Medicamentos</span></div>
+<div class="stat">◷<b id="horarios">0</b><span class="muted">Horários programados</span></div>
+<div class="stat">✓<b id="hoje">0</b><span class="muted">Tomadas previstas</span></div>
+<div class="stat">⌁<b id="status">—</b><span class="muted">ESP32</span></div>
+</div>
+<nav>
+<button class="active" data-page="inicio">⌂ Início</button>
+<button data-page="lista">▤ Medicamentos</button>
+<button data-page="cadastro">＋ Cadastrar</button>
+<button data-page="esp">⌁ ESP32</button>
+</nav>
+
+<section class="page active" id="inicio">
+<div class="panel">
+<h2>Programação de hoje</h2>
+<p class="muted" id="data"></p>
+<div id="agenda" class="empty">Nenhum horário cadastrado.</div>
+<button onclick="pagina('cadastro')">＋ Novo medicamento</button>
+</div>
+<div class="panel">
+<h2>Acesso rápido</h2>
+<button class="sec" onclick="pagina('lista')">Ver medicamentos</button>
+<div class="notice">Os dados ficam salvos neste navegador. A comunicação com o ESP32 será configurada quando a placa estiver disponível.</div>
+</div>
+</section>
+
+<section class="page" id="lista">
+<div class="panel">
+<h2>Meus medicamentos</h2>
+<input id="busca" placeholder="Buscar medicamento..." oninput="render()">
+<div id="medicamentos"></div>
+</div>
+</section>
+
+<section class="page" id="cadastro">
+<div class="panel">
+<h2 id="tituloForm">Cadastrar medicamento</h2>
+<form id="form">
+<label for="nome">Nome do medicamento *</label>
+<input id="nome" maxlength="80" required placeholder="Ex.: Vitamina D">
+<label for="dose">Dose por tomada *</label>
+<input id="dose" maxlength="60" required placeholder="Ex.: 1 comprimido">
+<label for="quantidade">Quantidade disponível</label>
+<input id="quantidade" maxlength="60" placeholder="Ex.: 30 comprimidos">
+<label for="inicio">Data de início</label>
+<input id="inicio" type="date">
+<label for="fim">Data de término (opcional)</label>
+<input id="fim" type="date">
+<label>Horários *</label>
+<div id="tempos"><div class="timeRow"><input type="time" class="hora" value="08:00" required><button type="button" class="del" onclick="this.parentElement.remove()">×</button></div></div>
+<button type="button" class="sec" onclick="addHora()">＋ Adicionar horário</button>
+<label for="obs">Observações</label>
+<textarea id="obs" maxlength="250" rows="3" placeholder="Observações opcionais"></textarea>
+<div class="actions">
+<button type="button" class="sec" onclick="limpar()">Limpar</button>
+<button type="submit">Salvar medicamento</button>
+</div>
+</form>
+</div>
+</section>
+
+<section class="page" id="esp">
+<div class="panel">
+<h2>Conexão com ESP32</h2>
+<p><b>Estado: aguardando placa</b></p>
+<p class="muted">O site está preparado para organizar os horários, mas ainda não envia comandos ao ESP32.</p>
+<div class="notice"><b>Como será a conexão:</b><br><br>
+1. O ESP32 criará uma rede Wi-Fi local.<br>
+2. Você conectará o iPhone a essa rede.<br>
+3. Abrirá o endereço local da placa no navegador.<br>
+4. O site enviará a programação para o ESP32.<br><br>
+A comunicação real ainda precisa ser desenvolvida e testada com a placa.
+</div>
+<h3 style="margin-top:20px">Backup dos dados</h3>
+<button onclick="exportar()">Exportar backup</button>
+<label for="arquivo">Importar backup JSON</label>
+<input id="arquivo" type="file" accept=".json,application/json">
+</div>
+</section>
+<p class="muted" style="text-align:center">MedOrganiza • Protótipo inicial</p>
+</main>
+
+<script>
+const CHAVE='medorganiza_dados';
+let meds=[],editando=null;
+const $=s=>document.querySelector(s);
+function guardar(){localStorage.setItem(CHAVE,JSON.stringify(meds));render()}
+function carregar(){try{meds=JSON.parse(localStorage.getItem(CHAVE)||'[]');if(!Array.isArray(meds))meds=[]}catch{meds=[]}}
+function pagina(p){
+ document.querySelectorAll('.page').forEach(e=>e.classList.toggle('active',e.id===p));
+ document.querySelectorAll('nav button').forEach(e=>e.classList.toggle('active',e.dataset.page===p));
+ window.scrollTo(0,0);
+ if(p==='cadastro'&&editando===null)limpar();
+}
+document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>pagina(b.dataset.page));
+function addHora(v=''){
+ const d=document.createElement('div');d.className='timeRow';
+ const i=document.createElement('input');i.type='time';i.className='hora';i.value=v;i.required=true;
+ const b=document.createElement('button');b.type='button';b.className='del';b.textContent='×';b.onclick=()=>{if(document.querySelectorAll('.hora').length>1)d.remove();else i.value=''};
+ d.append(i,b);$('#tempos').append(d);
+}
+function limpar(){
+ editando=null;$('#form').reset();$('#tituloForm').textContent='Cadastrar medicamento';
+ $('#tempos').innerHTML='';addHora('08:00');
+ $('#inicio').value=new Date().toLocaleDateString('en-CA');
+}
+$('#form').onsubmit=e=>{
+ e.preventDefault();
+ const horas=[...document.querySelectorAll('.hora')].map(x=>x.value).filter(Boolean).sort();
+ if(!horas.length){alert('Adicione pelo menos um horário.');return}
+ const m={id:editando||Date.now().toString(),nome:$('#nome').value.trim(),dose:$('#dose').value.trim(),quantidade:$('#quantidade').value.trim(),inicio:$('#inicio').value,fim:$('#fim').value,obs:$('#obs').value.trim(),horas};
+ if(m.fim&&m.inicio&&m.fim<m.inicio){alert('A data final deve ser posterior à inicial.');return}
+ if(editando)meds=meds.map(x=>x.id===editando?m:x);else meds.push(m);
+ guardar();limpar();pagina('lista');alert('Medicamento salvo!');
+};
+function editar(id){
+ const m=meds.find(x=>x.id===id);if(!m)return;
+ editando=id;pagina('cadastro');$('#tituloForm').textContent='Editar medicamento';
+ $('#nome').value=m.nome;$('#dose').value=m.dose;$('#quantidade').value=m.quantidade||'';
+ $('#inicio').value=m.inicio||'';$('#fim').value=m.fim||'';$('#obs').value=m.obs||'';
+ $('#tempos').innerHTML='';(m.horas||[]).forEach(addHora);
+}
+function excluir(id){if(confirm('Excluir este medicamento?')){meds=meds.filter(x=>x.id!==id);guardar()}}
+function render(){
+ const todos=meds.flatMap(m=>(m.horas||[]).map(h=>({...m,h}))).sort((a,b)=>a.h.localeCompare(b.h));
+ $('#total').textContent=meds.length;$('#horarios').textContent=todos.length;$('#hoje').textContent=todos.length;
+ $('#data').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+ $('#agenda').innerHTML=todos.length?todos.map(m=>`<div class="card"><b>${seg(m.h)}</b> — ${seg(m.nome)}<p class="muted">${seg(m.dose)}</p></div>`).join(''):'<div class="empty">Nenhum horário cadastrado.</div>';
+ const q=$('#busca').value.toLowerCase();
+ const filtrados=meds.filter(m=>m.nome.toLowerCase().includes(q));
+ $('#medicamentos').innerHTML=filtrados.length?filtrados.map(m=>`<article class="card"><h3>💊 ${seg(m.nome)}</h3><p>${seg(m.dose)}</p><p class="muted">${m.quantidade?'Quantidade: '+seg(m.quantidade):''}</p><p>${(m.horas||[]).map(h=>'<span class="chip">◷ '+seg(h)+'</span>').join('')}</p>${m.inicio||m.fim?'<p class="muted">Período: '+seg(m.inicio||'não informado')+' até '+seg(m.fim||'sem data final')+'</p>':''}${m.obs?'<p>'+seg(m.obs)+'</p>':''}<div class="actions"><button class="sec" onclick="editar('${m.id}')">Editar</button><button class="del" onclick="excluir('${m.id}')">Excluir</button></div></article>`).join(''):'<div class="empty">Nenhum medicamento encontrado.</div>';
+}
+function seg(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function exportar(){
+ const a=document.createElement('a');const blob=new Blob([JSON.stringify(meds,null,2)],{type:'application/json'});
+ a.href=URL.createObjectURL(blob);a.download='medorganiza-backup.json';a.click();URL.revokeObjectURL(a.href);
+}
+$('#arquivo').onchange=async e=>{
+ const f=e.target.files[0];if(!f)return;
+ try{const d=JSON.parse(await f.text());if(!Array.isArray(d))throw Error();if(confirm('Substituir a lista atual pelo backup?')){meds=d;guardar();alert('Backup importado.')}}catch{alert('Arquivo de backup inválido.')}
+ e.target.value='';
+};
+carregar();limpar();render();
+</script>
+</body>
+</html>
